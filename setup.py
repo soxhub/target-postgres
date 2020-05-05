@@ -36,6 +36,8 @@ setup(
     entry_points='''
       [console_scripts]
       target-postgres=target_postgres:cli
+      write_state=target_postgres:write_state
+      read_state=target_postgres:read_state
     ''',
     packages=find_packages()
 )

@@ -9,7 +9,7 @@ import uuid
 import hashlib
 
 import arrow
-from psycopg2 import sql
+from psycopg2 import sql, DatabaseError
 from psycopg2.extras import LoggingConnection, LoggingCursor
 
 from target_postgres import json_schema, singer
@@ -832,6 +832,37 @@ class PostgresTarget(SQLInterface):
             ret_json_schema['format'] = _format
 
         return ret_json_schema
+
+    def write_state(self, state_location):
+        self.LOGGER.info('Preparing Table to save state!')
+        try:
+            with self.conn.cursor() as cur:
+                create_table_query = '''CREATE TABLE IF NOT EXISTS state
+                      (id SERIAL PRIMARY KEY, value TEXT);'''
+
+                cur.execute(create_table_query)
+                self.conn.commit()
+
+                self.LOGGER.info('Table is ready!')
+                cur.execute("COPY state (value) FROM %s;", [ state_location ])
+                self.conn.commit()
+
+                self.LOGGER.info('State Saved!')
+
+        except (Exception, DatabaseError) as error :
+            print ("Error Save State To Db", error)
+
+    def read_state(self, destination_state_location):
+        self.LOGGER.info('write_state')
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("COPY (SELECT value from state ORDER BY id DESC LIMIT 1) TO %s;", [ destination_state_location ])
+                self.conn.commit()
+
+                self.LOGGER.info('State Written!')
+
+        except (Exception, DatabaseError) as error :
+            print ("Error Save State To Db", error)
 
     def json_schema_to_sql_type(self, schema):
         _type = json_schema.get_type(schema)

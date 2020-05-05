@@ -6,6 +6,7 @@ while [ -z $(netstat -lnt | awk '$4 ~ /:8080$/') ]; do
 done
 
 sleep 3
-nc -d localhost 8080 | target-postgres -c /etc/config/target.json
+nc -d localhost 8080 | target-postgres -c /etc/config/target.json >> /etc/config/state.json
+write_state -c /etc/config/target.json
 
 echo "Done"
